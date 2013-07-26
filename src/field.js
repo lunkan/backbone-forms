@@ -208,7 +208,8 @@ Form.Field = Backbone.View.extend({
     this.$el.removeClass(this.errorClassName);
 
     //Clear error message
-    this.$('[data-error]').empty();
+	//Jonas - changed to error id to avoid nested clear
+	this.$('#error-'+this.editor.id).empty();
   },
 
   /**
@@ -263,13 +264,14 @@ Form.Field = Backbone.View.extend({
 
 }, {
   //STATICS
-
+  //lunkan changed "data-editor" span to div or form will not validate
+  //Also error id
   template: _.template('\
-    <div>\
+    <div">\
       <label for="<%= editorId %>"><%= title %></label>\
       <div>\
-        <span data-editor></span>\
-        <div data-error></div>\
+        <div data-editor></div>\
+        <div id="error-<%= editorId %>" data-error></div>\
         <div><%= help %></div>\
       </div>\
     </div>\
