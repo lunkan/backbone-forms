@@ -35,16 +35,12 @@
 
       //Determine the editor to use
       this.Editor = (function() {
-        var type = schema.itemType;
+        //var type = schema.itemType;
 
-		//Default to Text
-        if (!type) return editors.Text;
-
-        //Use Repeater-specific version if available
-        //if (editors.Repeater[type]) return editors.Repeater[type];
+		return editors.RepeaterRow;
 
         //Or whichever was passed
-        return editors[type];
+        //return editors[type];
       })();
 
       this.items = [];
@@ -55,8 +51,6 @@
           value = this.value || [];
 
       //Create main element
-	  //Jonas add id to add butten
-	  //alert("key: " + this.key + " # " + this.id);
 	  var $el = $($.trim(this.template({repeaterId:this.id})));
 
       //Store a reference to the repeater (item container)
@@ -68,12 +62,6 @@
           self.addItem(itemValue);
         });
       }
-
-      //If no existing items create an empty one, unless the editor specifies otherwise
-      //J*
-	  //else {
-      //  if (!this.Editor.isAsync) this.addItem();
-      //}
 
       this.setElement($el);
       this.$el.attr('id', this.id);
@@ -113,11 +101,9 @@
         item.editor.on('all', function(event) {
           if (event === 'change') return;
 
-          // args = ["key:change", itemEditor, fieldEditor]
           var args = _.toArray(arguments);
           args[0] = 'item:' + event;
           args.splice(1, 0, self);
-          // args = ["item:key:change", this=repeaterEditor, itemEditor, fieldEditor]
 
           editors.Repeater.prototype.trigger.apply(this, args);
         }, self);
@@ -187,9 +173,6 @@
         this.trigger('remove', this, item.editor);
         this.trigger('change', this);
       }
-
-	  //Why do I need this?
-      //if (!this.items.length && !this.Editor.isAsync) this.addItem();
     },
 
     getValue: function() {
@@ -234,42 +217,31 @@
      * @return {Object|Null}
      */
     validate: function() {
-	
-	 //j*
-	 //removed fields may be undefined
-	 //if (!this.validators) return null;
 	  
       //Collect errors
       var errors = _.map(this.items, function(item) {
-		//alert("item " + JSON.stringify(item.value) + " " + item.validate());
         return item.validate();
       });
 
 	  //Don't bother about error messages (maybe with max/min rows)
 	  return null;
-	  
-      //Check if any item has errors
-     /* var hasErrors = _.compact(errors).length ? true : false;
-      
-	  if (!hasErrors) return null;
-	  
-      //If so create a shared error
-      var fieldError = {
-        type: 'repeater',
-        message: 'Some of the items in the repeater failed validation',
-        errors: errors
-      };
-
-      return fieldError;*/
     }
   }, {
-
+  
     //STATICS
     template: _.template('\
-      <div class="repeater-wrapper">\
-        <div data-items></div>\
-        <button data-target="<%= repeaterId %>" type="button" data-action="add">Add</button>\
-      </div>\
+      <table class="repeater-wrapper" data-items>\
+		<thead>\
+          <tr>\
+            <th>Test</th>\
+          </tr>\
+        </thead>\
+		<tfoot>\
+		  <tr>\
+            <th><button data-target="<%= repeaterId %>" type="button" data-action="add">Add</button></th>\
+          </tr>\
+		</tfoot>\
+      </table>\
     ', null, Form.templateSettings)
 
   });
@@ -291,13 +263,6 @@
         event.preventDefault();
         this.repeater.removeItem(this);
       }
-	  /*,
-      'keydown input[type=text]': function(event) {
-        if(event.keyCode !== 13) return;
-        event.preventDefault();
-        this.repeater.addItem();
-        this.repeater.$repeater.find("> li:last input").focus();
-      }*/
     },
 
     initialize: function(options) {
@@ -314,8 +279,7 @@
 
     render: function() {
 	
-	
-      //Create editor
+	  //Create editor
       this.editor = new this.Editor({
 		id: this.id,
         key: this.key,
@@ -331,7 +295,9 @@
       //Create main element
       var $el = $($.trim(this.template()));
 
-      $el.find('[data-editor]').append(this.editor.el);
+	  //Store a reference to the repeater (item container)
+      this.$item = $el.is('[data-editor]') ? $el : $el.find('[data-editor]');
+	  this.$item.append(this.editor.el);
 
       //Replace the entire element so there isn't a wrapper tag
       this.setElement($el);
@@ -361,27 +327,6 @@
     },
 
     validate: function() {
-	
-	  /*var value = this.getValue(),
-          formValues = this.repeater.form ? this.repeater.form.getValue() : {},
-          validators = this.schema.validators,
-          getValidator = this.getValidator;
-
-	  //j*
-	  alert("item validate " + this.editor.validate());
-      if (!validators) return null;*/
-
-      //Run through validators until an error is found
-      /*var error = null;
-      _.every(validators, function(validator) {
-		
-		error = getValidator(validator)(value, formValues);
-		//alert("##validator " + error + " - " + getValidator(validator) + " # " + validator);
-		
-		//alert("is error " + error + " " + value);
-		return true;
-        //return error ? false : true;
-      });*/
 
 	  error = this.editor.validate();
 	  
@@ -408,10 +353,7 @@
       this.$el.addClass(this.errorClassName);
 
       //Set error message
-      this.$('[data-error]').html(err.message);	
-	
-      //this.$el.addClass(this.errorClassName);
-      //this.$el.attr('title', err.message);
+      this.$('[data-error]').html(err.message);
     },
 
     /**
@@ -428,557 +370,80 @@
       //Clear error message
 	  this.$('[data-error]').empty();
 	}
-  
-    /*clearError: function() {
-      this.$el.removeClass(this.errorClassName);
-      this.$el.attr('title', null);
-    }*/
+	
   }, {
 
     //STATICS
     template: _.template('\
-      <div>\
-        <div data-editor></div>\
-        <button type="button" data-action="remove">&times;</button>\
-      </div>\
+      <tbody data-editor class="repeater-item">\
+		<tr>\
+			<td><button type="button" data-action="remove">&times;</button></td>\
+		</tr>\
+      </tbody>\
     ', null, Form.templateSettings),
 
     errorClassName: 'error'
 
   });
-
-/**
-   * Base modal object editor for use with the Repeater editor; used by Object 
-   * and NestedModal repeater types
-   */
-  Form.editors.Repeater.Table = Form.editors.Base.extend({
-
-    events: {
-      'click': 'openEditor'
-    },
-
-    /**
-     * @param {Object} options
-     * @param {Form} options.form                       The main form
-     * @param {Function} [options.schema.itemToString]  Function to transform the value for display in the repeater.
-     * @param {String} [options.schema.itemType]        Editor type e.g. 'Text', 'Object'.
-     * @param {Object} [options.schema.subSchema]       Schema for nested form,. Required when itemType is 'Object'
-     * @param {Function} [options.schema.model]         Model constructor function. Required when itemType is 'NestedModel'
-     */
-    initialize: function(options) {
-      options = options || {};
-      
-      Form.editors.Base.prototype.initialize.call(this, options);
-
-      this.form = options.form;
-      if (!options.form) throw 'Missing required option: "form"';
-
-      //Template
-      this.template = options.template || this.constructor.template;
-	  
-	  alert("Repeater table template: " + JSON.stringify(this.template));
-    },
-
-    /**
-     * Render the repeater item representation
-     */
-    render: function() {
-      var self = this;
-
-      //New items in the repeater are only rendered when the editor has been OK'd
-      if (_.isEmpty(this.value)) {
-        this.renderEditor();
-      }
-
-      //But items with values are added automatically
-      else {
-        this.renderSummary();
-
-        setTimeout(function() {
-          self.trigger('readyToAdd');
-        }, 0);
-      }
-
-      if (this.hasFocus) this.trigger('blur', this);
-
-      return this;
-    },
-
-    /**
-     * Renders the repeater item representation
-     */
-    renderSummary: function() {
-      this.$el.html($.trim(this.template({
-        summary: this.getStringValue()
-      })));
-    },
-
-    /**
-     * Function which returns a generic string representation of an object
-     *
-     * @param {Object} value
-     * 
-     * @return {String}
-     */
-    itemToString: function(value) {
-      var createTitle = function(key) {
-        var context = { key: key };
-
-        return Form.Field.prototype.createTitle.call(context);
-      };
-
-      value = value || {};
-
-      //Pretty print the object keys and values
-      var parts = [];
-      _.each(this.nestedSchema, function(schema, key) {
-        var desc = schema.title ? schema.title : createTitle(key),
-            val = value[key];
-
-        if (_.isUndefined(val) || _.isNull(val)) val = '';
-
-        parts.push(desc + ': ' + val);
-      });
-
-      return parts.join('<br />');
-    },
-
-    /**
-     * Returns the string representation of the object value
-     */
-    getStringValue: function() {
-      var schema = this.schema,
-          value = this.getValue();
-
-      if (_.isEmpty(value)) return '[Empty]';
-
-      //If there's a specified toString use that
-      if (schema.itemToString) return schema.itemToString(value);
-      
-      //Otherwise use the generic method or custom overridden method
-      return this.itemToString(value);
-    },
-
-	renderEditor: function() {
-	
-	  var self = this,
-          RepeaterForm = this.form.constructor;
-
-      var form = this.repeaterForm = new RepeaterForm({
-        schema: this.nestedSchema,
-        data: this.value
-      });
-
-      /*var modal = this.modal = new Form.editors.Repeater.Modal.ModalAdapter({
-        content: form,
-        animate: true
-      });
-
-      modal.open();
-
-      this.trigger('open', this);
-      this.trigger('focus', this);
-
-      modal.on('cancel', this.onModalClosed, this);
-      
-      modal.on('ok', _.bind(this.onModalSubmitted, this));*/
-	  
-	  alert("Repeater table schema: " + JSON.stringify(form.schema));
-	  
-    },
-	
-    openEditor: function() {
-      var self = this,
-          ModalForm = this.form.constructor;
-
-      var form = this.modalForm = new ModalForm({
-        schema: this.nestedSchema,
-        data: this.value
-      });
-
-      var modal = this.modal = new Form.editors.Repeater.Modal.ModalAdapter({
-        content: form,
-        animate: true
-      });
-
-      modal.open();
-
-      this.trigger('open', this);
-      this.trigger('focus', this);
-
-      modal.on('cancel', this.onModalClosed, this);
-      
-      modal.on('ok', _.bind(this.onModalSubmitted, this));
-    },
-
-    /**
-     * Called when the user clicks 'OK'.
-     * Runs validation and tells the repeater when ready to add the item
-     */
-    onModalSubmitted: function() {
-      var modal = this.modal,
-          form = this.modalForm,
-          isNew = !this.value;
-
-      //Stop if there are validation errors
-      var error = form.validate();
-      if (error) return modal.preventClose();
-
-      //Store form value
-      this.value = form.getValue();
-
-      //Render item
-      this.renderSummary();
-
-      if (isNew) this.trigger('readyToAdd');
-      
-      this.trigger('change', this);
-
-      this.onModalClosed();
-    },
-
-    /**
-     * Cleans up references, triggers events. To be called whenever the modal closes
-     */
-    onModalClosed: function() {
-      this.modal = null;
-      this.modalForm = null;
-
-      this.trigger('close', this);
-      this.trigger('blur', this);
-    },
-
-    getValue: function() {
-      return this.value;
-    },
-
-    setValue: function(value) {
-      this.value = value;
-    },
-    
-    focus: function() {
-      if (this.hasFocus) return;
-
-      this.openEditor();
-    },
-    
-    blur: function() {
-      if (!this.hasFocus) return;
-      
-      if (this.modal) {
-        this.modal.trigger('cancel');
-      }
-    }
-  }, {
-    //STATICS
-    template: _.template('\
-      <div><%= summary %></div>\
-    ', null, Form.templateSettings),
-
-    //The modal adapter that creates and manages the modal dialog.
-    //Defaults to BootstrapModal (http://github.com/powmedia/backbone.bootstrap-modal)
-    //Can be replaced with another adapter that implements the same interface.
-    ModalAdapter: Backbone.BootstrapModal,
-    
-    //Make the wait repeater for the 'ready' event before adding the item to the repeater
-    isAsync: true
-  });
   
-  /**
-   * Base modal object editor for use with the Repeater editor; used by Object 
-   * and NestedModal repeater types
-   */
-  Form.editors.Repeater.Modal = Form.editors.Base.extend({
-
-    events: {
-      'click': 'openEditor'
-    },
-
-    /**
-     * @param {Object} options
-     * @param {Form} options.form                       The main form
-     * @param {Function} [options.schema.itemToString]  Function to transform the value for display in the repeater.
-     * @param {String} [options.schema.itemType]        Editor type e.g. 'Text', 'Object'.
-     * @param {Object} [options.schema.subSchema]       Schema for nested form,. Required when itemType is 'Object'
-     * @param {Function} [options.schema.model]         Model constructor function. Required when itemType is 'NestedModel'
-     */
+  /*Form.editors.Repeater.Row = Form.editors.NestedModel.extend({
     initialize: function(options) {
-      options = options || {};
-      
-      Form.editors.Base.prototype.initialize.call(this, options);
-      
-	  alert("required");
-	  
-      //Dependencies
-      if (!Form.editors.Repeater.Modal.ModalAdapter) throw 'A ModalAdapter is required';
+		
+		//alert(JSON.stringify(options.template));
+		Form.editors.Base.prototype.initialize.call(this, options);
 
-      this.form = options.form;
-      if (!options.form) throw 'Missing required option: "form"';
-
-      //Template
-      this.template = options.template || this.constructor.template;
-    },
-
-    /**
-     * Render the repeater item representation
-     */
-    render: function() {
-      var self = this;
-
-      //New items in the repeater are only rendered when the editor has been OK'd
-      if (_.isEmpty(this.value)) {
-        this.openEditor();
-      }
-
-      //But items with values are added automatically
-      else {
-        this.renderSummary();
-
-        setTimeout(function() {
-          self.trigger('readyToAdd');
-        }, 0);
-      }
-
-      if (this.hasFocus) this.trigger('blur', this);
-
-      return this;
-    },
-
-    /**
-     * Renders the repeater item representation
-     */
-    renderSummary: function() {
-      this.$el.html($.trim(this.template({
-        summary: this.getStringValue()
-      })));
-    },
-
-    /**
-     * Function which returns a generic string representation of an object
-     *
-     * @param {Object} value
-     * 
-     * @return {String}
-     */
-    itemToString: function(value) {
-      var createTitle = function(key) {
-        var context = { key: key };
-
-        return Form.Field.prototype.createTitle.call(context);
-      };
-
-      value = value || {};
-
-      //Pretty print the object keys and values
-      var parts = [];
-      _.each(this.nestedSchema, function(schema, key) {
-        var desc = schema.title ? schema.title : createTitle(key),
-            val = value[key];
-
-        if (_.isUndefined(val) || _.isNull(val)) val = '';
-
-        parts.push(desc + ': ' + val);
-      });
-
-      return parts.join('<br />');
-    },
-
-    /**
-     * Returns the string representation of the object value
-     */
-    getStringValue: function() {
-      var schema = this.schema,
-          value = this.getValue();
-
-      if (_.isEmpty(value)) return '[Empty]';
-
-      //If there's a specified toString use that
-      if (schema.itemToString) return schema.itemToString(value);
-      
-      //Otherwise use the generic method or custom overridden method
-      return this.itemToString(value);
-    },
-
-    openEditor: function() {
-      var self = this,
-          ModalForm = this.form.constructor;
-
-      var form = this.modalForm = new ModalForm({
-        schema: this.nestedSchema,
-        data: this.value
-      });
-
-      var modal = this.modal = new Form.editors.Repeater.Modal.ModalAdapter({
-        content: form,
-        animate: true
-      });
-
-      modal.open();
-
-      this.trigger('open', this);
-      this.trigger('focus', this);
-
-      modal.on('cancel', this.onModalClosed, this);
-      
-      modal.on('ok', _.bind(this.onModalSubmitted, this));
-    },
-
-    /**
-     * Called when the user clicks 'OK'.
-     * Runs validation and tells the repeater when ready to add the item
-     */
-    onModalSubmitted: function() {
-      var modal = this.modal,
-          form = this.modalForm,
-          isNew = !this.value;
-
-      //Stop if there are validation errors
-      var error = form.validate();
-      if (error) return modal.preventClose();
-
-      //Store form value
-      this.value = form.getValue();
-
-      //Render item
-      this.renderSummary();
-
-      if (isNew) this.trigger('readyToAdd');
-      
-      this.trigger('change', this);
-
-      this.onModalClosed();
-    },
-
-    /**
-     * Cleans up references, triggers events. To be called whenever the modal closes
-     */
-    onModalClosed: function() {
-      this.modal = null;
-      this.modalForm = null;
-
-      this.trigger('close', this);
-      this.trigger('blur', this);
-    },
-
-    getValue: function() {
-      return this.value;
-    },
-
-    setValue: function(value) {
-      this.value = value;
+		if (!this.form) throw 'Missing required option "form"';
+		if (!options.schema.model) throw 'Missing required "schema.model" option for NestedModel editor';
     },
     
-    focus: function() {
-      if (this.hasFocus) return;
+	render: function() {
+		//Get the constructor for creating the nested form; i.e. the same constructor as used by the parent form
+		var NestedForm = this.form.constructor;
 
-      this.openEditor();
-    },
-    
-    blur: function() {
-      if (!this.hasFocus) return;
-      
-      if (this.modal) {
-        this.modal.trigger('cancel');
-      }
-    }
+		var data = this.value || {},
+			key = this.key,
+			nestedModel = this.schema.model;
+
+		//Wrap the data in a model if it isn't already a model instance
+		var modelInstance = (data.constructor === nestedModel) ? data : new nestedModel(data);
+
+		this.nestedForm = new NestedForm({
+		  model: modelInstance,
+		  idPrefix: this.id + '_',
+		  fieldTemplate: 'repeaterField'
+		});
+
+		this._observeFormEvents();
+
+		//Render form
+		var $form = $(this.nestedForm.render().el);
+		alert($form.html());
+		//alert($form.html());
+		this.$el.html(this.nestedForm.render().el);
+
+		if (this.hasFocus) this.trigger('blur', this);
+
+		return this;
+	  },
+	
+	myGetStringValue: function() {
+		alert("Form.editors.Repeater.Row");
+	}
   }, {
-    //STATICS
-    template: _.template('\
-      <div><%= summary %></div>\
-    ', null, Form.templateSettings),
 
-    //The modal adapter that creates and manages the modal dialog.
-    //Defaults to BootstrapModal (http://github.com/powmedia/backbone.bootstrap-modal)
-    //Can be replaced with another adapter that implements the same interface.
-    ModalAdapter: Backbone.BootstrapModal,
-    
-    //Make the wait repeater for the 'ready' event before adding the item to the repeater
-    isAsync: true
-  });
+	  //STATICS
+	  template: _.template('\
+		<form class="j" data-fieldsets></form>\
+	  ', null, this.templateSettings),
 
+	  templateSettings: {
+		evaluate: /<%([\s\S]+?)%>/g, 
+		interpolate: /<%=([\s\S]+?)%>/g, 
+		escape: /<%-([\s\S]+?)%>/g
+	  },
 
-  /*Form.editors.Repeater.Object = Form.editors.Repeater.Modal.extend({
-    initialize: function () {
-      Form.editors.Repeater.Modal.prototype.initialize.apply(this, arguments);
+	  editors: {}
 
-      var schema = this.schema;
-
-      if (!schema.subSchema) throw 'Missing required option "schema.subSchema"';
-
-      this.nestedSchema = schema.subSchema;
-    }
-  });*/
-  
-  Form.editors.Repeater.Object = Form.editors.Repeater.Table.extend({
-    initialize: function () {
-      Form.editors.Repeater.Table.prototype.initialize.apply(this, arguments);
-
-      var schema = this.schema;
-
-      if (!schema.subSchema) throw 'Missing required option "schema.subSchema"';
-
-      this.nestedSchema = schema.subSchema;
-    }
-  });
-
-  Form.editors.Repeater.NestedModel = Form.editors.Repeater.Table.extend({
-    initialize: function() {
-      Form.editors.Repeater.Table.prototype.initialize.apply(this, arguments);
-
-      var schema = this.schema;
-
-      if (!schema.model) throw 'Missing required option "schema.model"';
-
-      var nestedSchema = schema.model.prototype.schema;
-
-      this.nestedSchema = (_.isFunction(nestedSchema)) ? nestedSchema() : nestedSchema;
-    },
-
-    /**
-     * Returns the string representation of the object value
-     */
-    getStringValue: function() {
-      var schema = this.schema,
-          value = this.getValue();
-
-      if (_.isEmpty(value)) return null;
-
-      //If there's a specified toString use that
-      if (schema.itemToString) return schema.itemToString(value);
-      
-      //Otherwise use the model
-      return new (schema.model)(value).toString();
-    }
-  });
-
-  /*Form.editors.Repeater.NestedModel = Form.editors.Repeater.Modal.extend({
-    initialize: function() {
-      Form.editors.Repeater.Modal.prototype.initialize.apply(this, arguments);
-
-      var schema = this.schema;
-
-      if (!schema.model) throw 'Missing required option "schema.model"';
-
-      var nestedSchema = schema.model.prototype.schema;
-
-      this.nestedSchema = (_.isFunction(nestedSchema)) ? nestedSchema() : nestedSchema;
-    },
-
-    //
-     // Returns the string representation of the object value
-     //
-    getStringValue: function() {
-      var schema = this.schema,
-          value = this.getValue();
-
-      if (_.isEmpty(value)) return null;
-
-      //If there's a specified toString use that
-      if (schema.itemToString) return schema.itemToString(value);
-      
-      //Otherwise use the model
-      return new (schema.model)(value).toString();
-    }
-  });*/
+	});*/
 
 })(Backbone.Form);

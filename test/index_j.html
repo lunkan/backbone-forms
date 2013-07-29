@@ -40,10 +40,13 @@
   <script src="../src/editors/checkboxes.js"></script>
   <script src="../src/editors/object.js"></script>
   <script src="../src/editors/nestedmodel.js"></script>
+  <script src="../src/repeaterform.js"></script>
+  <script src="../src/editors/repeaterrow.js"></script>
   <script src="../src/editors/date.js"></script>
   <script src="../src/editors/datetime.js"></script>
 
   <script>Backbone.Form = Form</script>
+  <script>Backbone.RepeaterForm = RepeaterForm</script>
 	
   <script src="../src/editors/extra/list.js"></script>
   <script src="../src/editors/extra/repeater.js"></script>
@@ -107,7 +110,7 @@
 	  
 	  var NestedRepeaterModel = Backbone.Model.extend({
         schema: {
-          nested: { type: 'Repeater', itemType: 'NestedModel', model: RepeaterModel }
+          nested: { type: 'Repeater', model: RepeaterModel }
         }
       });
         
@@ -152,9 +155,9 @@
         } },
 		
 		//Repeater
-        textRepeater: { type: 'Repeater', itemType: 'Text', validators: ['required'] },
-		nestedRepeater: { type: 'Repeater', itemType: 'NestedModel', model: RepeaterModel },
-		nestedRepeaterModel: { type: 'Repeater', itemType: 'NestedModel', model: NestedRepeaterModel }
+        //textRepeater: { type: 'Repeater', itemType: 'Text', validators: ['required'] },
+		//nestedRepeater: { type: 'Repeater', itemType: 'NestedModel', model: RepeaterModel },
+		nestedRepeaterModel: { type: 'Repeater', model: NestedRepeaterModel }
       };
       
       var model = new Backbone.Model({

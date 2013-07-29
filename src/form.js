@@ -213,7 +213,13 @@ var Form = Backbone.View.extend({
       if (_.isUndefined(selection)) return;
 
       _.each(self.fieldsets, function(fieldset) {
-        $container.append(fieldset.render().el);
+    	  try{
+    		  $container.append(fieldset.render().el);
+    	  //alert(fieldset.render());
+    	  }
+    	  catch(e){
+    		  alert(JSON.stringify(fieldset));
+    	  }
       });
     });
 

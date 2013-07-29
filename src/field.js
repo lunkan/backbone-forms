@@ -267,9 +267,9 @@ Form.Field = Backbone.View.extend({
   //lunkan changed "data-editor" span to div or form will not validate
   //Also error id
   template: _.template('\
-    <div">\
+    <div class="field">\
       <label for="<%= editorId %>"><%= title %></label>\
-      <div>\
+      <div class="field-wrapper">\
         <div data-editor></div>\
         <div id="error-<%= editorId %>" data-error></div>\
         <div><%= help %></div>\
