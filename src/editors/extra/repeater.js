@@ -55,7 +55,7 @@
 
       //Store a reference to the repeater (item container)
       this.$repeater = $el.is('[data-items]') ? $el : $el.find('[data-items]');
-
+      
 	  //Add existing items
       if (value.length) {
         _.each(value, function(itemValue) {
@@ -78,12 +78,12 @@
      * @param {Boolean} [userInitiated] If the item was added by the user clicking 'add'
      */
     addItem: function(value, userInitiated) {
-	
+    	
       var self = this,
           editors = Form.editors;
 		
       //Create the item
-      var item = new editors.Repeater.Item({
+      /*var item = new editors.Repeater.Item({
 		repeater: this,
         form: this.form,
         schema: this.schema,
@@ -92,13 +92,36 @@
         key: this.key
       });
 	  item.id = this.id + '-item-' + item.cid;
-	  item.render();
+	  item.render();*/
+	  
+      /*var item = new editors.RepeaterRow({
+		id: this.id,
+        key: this.key,
+        schema: this.schema,
+        value: this.value,
+        repeater: this.repeater,
+        item: this,
+        form: this.form
+      });*/
+      
+      var item = new editors.RepeaterRow({
+  		id: this.id,
+        key: this.key,
+        schema: this.schema,
+        value: value,
+        repeater: this,
+        item: this,
+        form: this.form
+      });
+      item.id = this.id + '-item-' + item.cid;
+      item.render();
+      //alert($(item.el).html());
       
       var _addItem = function() {
         self.items.push(item);
         self.$repeater.append(item.el);
         
-        item.editor.on('all', function(event) {
+        /*item.editor.on('all', function(event) {
           if (event === 'change') return;
 
           var args = _.toArray(arguments);
@@ -106,9 +129,9 @@
           args.splice(1, 0, self);
 
           editors.Repeater.prototype.trigger.apply(this, args);
-        }, self);
-
-        item.editor.on('change', function() {
+        }, self);*/
+        
+        /*item.editor.on('change', function() {
           if (!item.addEventTriggered) {
             item.addEventTriggered = true;
             this.trigger('add', this, item.editor);
@@ -128,7 +151,7 @@
             if (_.find(self.items, function(item) { return item.editor.hasFocus; })) return;
             self.trigger('blur', self);
           }, 0);
-        }, self);
+        }, self);*/
         
         if (userInitiated || value) {
           item.addEventTriggered = true;
@@ -139,7 +162,7 @@
           self.trigger('change', self);
         }
       };
-
+      
       //Check if we need to wait for the item to complete before adding to the repeater
       if (this.Editor.isAsync) {
         item.editor.on('readyToAdd', _addItem, this);
@@ -148,7 +171,7 @@
       //Most editors can be added automatically
       else {
         _addItem();
-        item.editor.focus();
+        //item.editor.focus();
       }
       
       return item;
@@ -230,7 +253,7 @@
   
     //STATICS
     template: _.template('\
-      <table class="repeater-wrapper" data-items>\
+      <table class="repeater-wrapper">\
 		<thead>\
           <tr>\
             <th>Test</th>\
@@ -241,6 +264,8 @@
             <th><button data-target="<%= repeaterId %>" type="button" data-action="add">Add</button></th>\
           </tr>\
 		</tfoot>\
+		<tbody data-items>\
+        </tbody>\
       </table>\
     ', null, Form.templateSettings)
 

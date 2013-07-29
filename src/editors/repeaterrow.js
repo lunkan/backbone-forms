@@ -9,13 +9,24 @@
 Form.editors.RepeaterRow = Form.editors.Base.extend({
 //Form.editors.Object.extend({
 
-  tagName: "tr",
-  className: "repeater-row",
+  //tagName: "tr",
+  //className: "repeater-row",
   hasNestedForm: true,
   
+  events: {
+      'click [data-action="remove"]': function(e) {
+        e.preventDefault();
+        if($(e.currentTarget).attr("data-target") != this.id)
+			return;
+        
+        //this.repeater.removeItem(this);
+        this.repeater.removeItem(this);
+      }
+  },
+    
   initialize: function(options) {
     Form.editors.Base.prototype.initialize.call(this, options);
-
+    this.repeater = options.repeater;
     if (!this.form) throw 'Missing required option "form"';
     if (!options.schema.model) throw 'Missing required "schema.model" option for RepeaterRow editor';
   },
@@ -33,7 +44,7 @@ Form.editors.RepeaterRow = Form.editors.Base.extend({
     //Wrap the data in a model if it isn't already a model instance
     var modelInstance = (data.constructor === repeaterRow) ? data : new repeaterRow(data);
    
-	this.nestedForm = new Backbone.RepeaterForm({
+    this.nestedForm = new Backbone.RepeaterForm({
 	  model: modelInstance,
       idPrefix: this.id + '_',
       fieldTemplate: 'field'
@@ -48,9 +59,30 @@ Form.editors.RepeaterRow = Form.editors.Base.extend({
 
     this._observeFormEvents();
 
+    /*----------*/
+    /*var $el = $($.trim(this.constructor.template()));
+    this.$item = $el.is('[repeater-row]') ? $el : $el.find('[repeater-row]');
+    this.$item.prepend(this.nestedForm.render().el);
+
+    //Replace the entire element so there isn't a wrapper tag
+    this.setElement($el);*/
+    /*----------*/
+    
+    /*----------*/
+    var $el = $(this.nestedForm.render().el);
+    /*this.$item = $el.is('[repeater-row]') ? $el : $el.find('[repeater-row]');
+    this.$item.prepend(this.nestedForm.render().el);*/
+
+    	
+    //<%= repeaterId %>
+    $el.append('<td><button type="button" data-target="'+this.id+'" data-action="remove">&times;</button></td>')
+    
+    //Replace the entire element so there isn't a wrapper tag
+    this.setElement($el);
+    /*----------*/
+    
     //Render form
-    this.$el.html(this.nestedForm.render().el);
-	//view.setElement(element) 
+    //this.$el.html(this.nestedForm.render().el);
 	
     if (this.hasFocus) this.trigger('blur', this);
 
@@ -122,5 +154,16 @@ Form.editors.RepeaterRow = Form.editors.Base.extend({
       this.trigger.apply(this, args);
     }, this);
   }
+
+}, {
+
+    //STATICS
+    template: _.template('\
+      <tr repeater-row>\
+    	<td><button type="button" data-action="remove">&times;</button></td>\
+	  </tr>\
+    ', null, Form.templateSettings),
+
+    errorClassName: 'error'
 
 });

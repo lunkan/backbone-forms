@@ -163,7 +163,7 @@ var RepeaterForm = Form.extend({
 
       _.each(self.fieldsets, function(fieldset) {
     	  	_.each(fieldset.fields, function(field) {
-    	        $container.append(field.render().el);
+    	        $container.prepend(field.render().el);
     	    });
       });
     });
@@ -191,7 +191,8 @@ var RepeaterForm = Form.extend({
   ', null, Form.templateSettings),
 			  
   template: _.template('\
-    <td><form data-fieldsets class="repeater-form"></form></td>\
+    <tr data-fieldsets class="repeater-form">\
+	</tr>\
   ', null, this.templateSettings),
 
   templateSettings: {
