@@ -22,6 +22,8 @@
     },
 
     initialize: function(options) {
+      var self = this
+    	
 	  options = options || {};
 
       var editors = Form.editors;
@@ -31,7 +33,15 @@
       var schema = this.schema;
       if (!schema) throw "Missing required option 'schema'";
 
-      this.template = options.template || this.constructor.template;
+      this.caption = this.createTitle(this.schema.title);
+      this.headers = this.createHeaders(this.schema.model);
+      
+      this.schema.layout = this.schema.layout || 'horizontal';
+      if(this.schema.layout == 'vertical') {
+    	  this.template = options.template || this.constructor.verticalTemplate;
+      } else {
+    	  this.template = options.template || this.constructor.template;
+      }
 
       //Determine the editor to use
       this.Editor = (function() {
@@ -46,12 +56,32 @@
       this.items = [];
     },
 
+    createTitle: function(str) {
+    	
+      str = str.replace(/([A-Z])/g, ' $1');
+      str = str.replace(/^./, function(str) { return str.toUpperCase(); });
+      return str;
+    },
+    
+    createHeaders: function(model) {
+    	
+      var self = this;
+      var modelInstance = new model({});
+        
+      var headers = [];
+      _.each(modelInstance.schema, function(value, key) {
+	    var header = self.createTitle(key);
+	    headers.push(header);
+	  });
+      
+      return headers;
+    },
+    
     render: function() {
       var self = this,
           value = this.value || [];
 
-      //Create main element
-	  var $el = $($.trim(this.template({repeaterId:this.id})));
+      var $el = $($.trim(this.template({repeaterId:this.id, caption: self.caption, headers: self.headers})));
 
       //Store a reference to the repeater (item container)
       this.$repeater = $el.is('[data-items]') ? $el : $el.find('[data-items]');
@@ -81,28 +111,6 @@
     	
       var self = this,
           editors = Form.editors;
-		
-      //Create the item
-      /*var item = new editors.Repeater.Item({
-		repeater: this,
-        form: this.form,
-        schema: this.schema,
-        value: value,
-        Editor: this.Editor,
-        key: this.key
-      });
-	  item.id = this.id + '-item-' + item.cid;
-	  item.render();*/
-	  
-      /*var item = new editors.RepeaterRow({
-		id: this.id,
-        key: this.key,
-        schema: this.schema,
-        value: this.value,
-        repeater: this.repeater,
-        item: this,
-        form: this.form
-      });*/
       
       var item = new editors.RepeaterRow({
   		id: this.id,
@@ -115,7 +123,6 @@
       });
       item.id = this.id + '-item-' + item.cid;
       item.render();
-      //alert($(item.el).html());
       
       var _addItem = function() {
         self.items.push(item);
@@ -251,17 +258,31 @@
     }
   }, {
   
-    //STATICS
     template: _.template('\
       <table class="repeater-wrapper">\
 		<thead>\
-          <tr>\
-            <th>Test</th>\
+    	  <tr>\
+    	  <% _.each(headers, function(value) { %>\
+		    <th><%= value %></th>\
+		  <% }); %>\
+    		<th></th>\
           </tr>\
         </thead>\
 		<tfoot>\
 		  <tr>\
-            <th><button data-target="<%= repeaterId %>" type="button" data-action="add">Add</button></th>\
+            <th colspan="<%= (headers.length+1) %>"><button data-target="<%= repeaterId %>" type="button" data-action="add">Add</button></th>\
+          </tr>\
+		</tfoot>\
+		<tbody data-items>\
+        </tbody>\
+      </table>\
+    ', null, Form.templateSettings),
+    
+    verticalTemplate: _.template('\
+      <table class="repeater-wrapper">\
+		<tfoot>\
+		  <tr>\
+            <th colspan="2"><button data-target="<%= repeaterId %>" type="button" data-action="add">Add</button></th>\
           </tr>\
 		</tfoot>\
 		<tbody data-items>\
@@ -281,7 +302,7 @@
    * @param {Mixed} options.value       Value
    * @param {Object} options.schema     Field schema
    */
-  Form.editors.Repeater.Item = Form.editors.Base.extend({
+  /*Form.editors.Repeater.Item = Form.editors.Base.extend({
 
     events: {
       'click [data-action="remove"]': function(event) {
@@ -366,9 +387,7 @@
 	  return error ? error : null;
     },
 
-    /**
-     * Show a validation error
-     */
+    //Show a validation error
     setError: function(err) {
 	
 	  //Nested form editors (e.g. Object) set their errors internally
@@ -381,9 +400,7 @@
       this.$('[data-error]').html(err.message);
     },
 
-    /**
-     * Hide validation errors
-     */
+    //Hide validation errors
 	clearError: function() {
 	
 	  //Nested form editors (e.g. Object) set their errors internally
@@ -409,66 +426,6 @@
 
     errorClassName: 'error'
 
-  });
-  
-  /*Form.editors.Repeater.Row = Form.editors.NestedModel.extend({
-    initialize: function(options) {
-		
-		//alert(JSON.stringify(options.template));
-		Form.editors.Base.prototype.initialize.call(this, options);
-
-		if (!this.form) throw 'Missing required option "form"';
-		if (!options.schema.model) throw 'Missing required "schema.model" option for NestedModel editor';
-    },
-    
-	render: function() {
-		//Get the constructor for creating the nested form; i.e. the same constructor as used by the parent form
-		var NestedForm = this.form.constructor;
-
-		var data = this.value || {},
-			key = this.key,
-			nestedModel = this.schema.model;
-
-		//Wrap the data in a model if it isn't already a model instance
-		var modelInstance = (data.constructor === nestedModel) ? data : new nestedModel(data);
-
-		this.nestedForm = new NestedForm({
-		  model: modelInstance,
-		  idPrefix: this.id + '_',
-		  fieldTemplate: 'repeaterField'
-		});
-
-		this._observeFormEvents();
-
-		//Render form
-		var $form = $(this.nestedForm.render().el);
-		alert($form.html());
-		//alert($form.html());
-		this.$el.html(this.nestedForm.render().el);
-
-		if (this.hasFocus) this.trigger('blur', this);
-
-		return this;
-	  },
-	
-	myGetStringValue: function() {
-		alert("Form.editors.Repeater.Row");
-	}
-  }, {
-
-	  //STATICS
-	  template: _.template('\
-		<form class="j" data-fieldsets></form>\
-	  ', null, this.templateSettings),
-
-	  templateSettings: {
-		evaluate: /<%([\s\S]+?)%>/g, 
-		interpolate: /<%=([\s\S]+?)%>/g, 
-		escape: /<%-([\s\S]+?)%>/g
-	  },
-
-	  editors: {}
-
-	});*/
+  });*/
 
 })(Backbone.Form);

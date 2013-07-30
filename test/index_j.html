@@ -95,6 +95,9 @@
   <script>
     $(function() {
       var NestedModel = Backbone.Model.extend({
+    	defaults: {
+    	  name:"no-name"
+    	},
         schema: {
           name: { validators: ['required']},
           email: { validators: ['required', 'email'] }
@@ -157,7 +160,7 @@
 		//Repeater
         //textRepeater: { type: 'Repeater', itemType: 'Text', validators: ['required'] },
 		//nestedRepeater: { type: 'Repeater', itemType: 'NestedModel', model: RepeaterModel },
-		nestedRepeaterModel: { type: 'Repeater', model: NestedRepeaterModel }
+		nestedRepeaterModel: { type: 'Repeater', layout:'vertical', model: NestedRepeaterModel }
       };
       
       var model = new Backbone.Model({
@@ -165,8 +168,6 @@
         hidden: 'secret!',
         checkbox: true,
         textList: ['item1', 'item2', 'item3'],
-		textRepeater: ['repeater1', 'repeater2', 'repeater3'],
-		nestedRepeater: [{name:'name', email:'email'}],
 		nestedRepeaterModel: [{nested:[{name:'name', email:'email'}]}]
       });
 

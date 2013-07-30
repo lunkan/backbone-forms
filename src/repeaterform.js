@@ -18,37 +18,51 @@ var RepeaterForm = Form.extend({
    * @param {Function} [options.template]
    */
   initialize: function(options) {
-	  
+	 
 	var self = this;
-
+	
     options = options || {};
-
+    
+    
     //Find the schema to use
     var schema = this.schema = (function() {
+      
       //Prefer schema from options
       if (options.schema) return _.result(options, 'schema');
-
+      
       //Then schema on model
       var model = options.model;
       if (model && model.schema) {
         return (_.isFunction(model.schema)) ? model.schema() : model.schema;
       }
-
+      
       //Then built-in schema
       if (self.schema) {
         return (_.isFunction(self.schema)) ? self.schema() : self.schema;
       }
-
+      
       //Fallback to empty schema
       return {};
     })();
+    
+    if (!options.layout) throw 'Missing required "layout" option for RepeaterForm'; 	
+    this.layout = options.layout;
 
     //Store important data
     _.extend(this, _.pick(options, 'model', 'data', 'idPrefix'));
 
     //Override defaults
     var constructor = this.constructor;
-    this.template = options.template || constructor.template;
+    
+    if(this.layout === 'vertical') {
+    	this.template = options.template || constructor.verticalTemplate;
+    } else {
+    	this.template = options.template || constructor.template;
+    }
+    
+    //alert(JSON.stringify(this.schema));
+    //this.templateData = {title: this.createTitle("hej") };
+    
     this.Fieldset = options.Fieldset || constructor.Fieldset;
     this.Field = options.Field || constructor.Field;
     this.NestedField = options.NestedField || constructor.NestedField;
@@ -83,13 +97,19 @@ var RepeaterForm = Form.extend({
    * @return {Form.Field}
    */
   createField: function(key, schema) {
+	
+    if(this.layout === 'vertical') {
+    	var fieldTemplate = this.constructor.verticalFieldTemplate;
+    } else {
+    	var fieldTemplate = this.constructor.fieldTemplate;
+    } 
 	  
 	var options = {
       form: this,
       key: key,
       schema: schema,
       idPrefix: this.idPrefix,
-      template: this.constructor.fieldTemplate
+      template: fieldTemplate
     };
 
     if (this.model) {
@@ -107,13 +127,19 @@ var RepeaterForm = Form.extend({
     return field;
   },
   
+  createTitle: function(str) {
+  	str = str.replace(/([A-Z])/g, ' $1');
+    str = str.replace(/^./, function(str) { return str.toUpperCase(); });
+    return str;
+  },
+    
   render: function() {
     var self = this,
         fields = this.fields;
-
+    
     //Render form
     var $form = $($.trim(this.template(_.result(this, 'templateData'))));
-
+    
     //Render standalone editors
     /*$form.find('[data-editors]').add($form).each(function(i, el) {
       var $container = $(el),
@@ -163,7 +189,7 @@ var RepeaterForm = Form.extend({
 
       _.each(self.fieldsets, function(fieldset) {
     	  	_.each(fieldset.fields, function(field) {
-    	        $container.prepend(field.render().el);
+    	        $container.append(field.render().el);
     	    });
       });
     });
@@ -181,7 +207,6 @@ var RepeaterForm = Form.extend({
 
   fieldTemplate: _.template('\
     <td class="field row-field">\
-      <label for="<%= editorId %>"><%= title %></label>\
       <div class="field-wrapper">\
         <div data-editor></div>\
         <div id="error-<%= editorId %>" data-error></div>\
@@ -192,6 +217,30 @@ var RepeaterForm = Form.extend({
 			  
   template: _.template('\
     <tr data-fieldsets class="repeater-form">\
+	</tr>\
+  ', null, this.templateSettings),
+  
+  verticalFieldTemplate: _.template('\
+    <tr>\
+	  <th><%= title %></th>\
+      <td class="field row-field">\
+        <div class="field-wrapper">\
+          <div data-editor></div>\
+          <div id="error-<%= editorId %>" data-error></div>\
+          <div><%= help %></div>\
+        </div>\
+      </td>\
+	</tr>\
+  ', null, Form.templateSettings),
+  
+  verticalTemplate: _.template('\
+    <tr class="repeater-form">\
+	  <td>\
+		  <table>\
+		  	<tbody data-fieldsets>\
+		    </tbody>\
+		  </table>\
+	  </td>\
 	</tr>\
   ', null, this.templateSettings),
 
