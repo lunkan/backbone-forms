@@ -94,26 +94,26 @@
   </div>
   <script>
     $(function() {
-      var NestedModel = Backbone.Model.extend({
-    	defaults: {
-    	  name:"no-name"
-    	},
+      /*var NestedModel = Backbone.Model.extend({
+    	schema: {
+          name: { validators: ['required']},
+          email: { validators: ['required', 'email'] }
+        }
+      });*/
+	  
+	  var WeightModel = Backbone.Model.extend({
+		defaults: {
+	      name:"no-name"
+	    },
         schema: {
           name: { validators: ['required']},
           email: { validators: ['required', 'email'] }
         }
       });
 	  
-	  var RepeaterModel = Backbone.Model.extend({
-        schema: {
-          name: { validators: ['required']},
-          email: { validators: ['required', 'email'] }
-        }
-      });
-	  
-	  var NestedRepeaterModel = Backbone.Model.extend({
-        schema: {
-          nested: { type: 'Repeater', model: RepeaterModel }
+	  var WeightGroupModel = Backbone.Model.extend({
+	    schema: {
+          weight: { type: 'Repeater', model: WeightModel, max:3, min:1 }
         }
       });
         
@@ -141,26 +141,26 @@
           }
         ] },
         checkboxes: { type: 'Checkboxes', options: ['Sterling', 'Lana', 'Cyril', 'Cheryl', 'Pam'] },
-        object:     { type: 'Object', subSchema: {
+        /*object:     { type: 'Object', subSchema: {
           name: {},
           age:  { type: 'Number' }
-        }},
-        nestedModel: { type: 'NestedModel', model: NestedModel },
+        }},*/
+        //nestedModel: { type: 'NestedModel', model: NestedModel },
         shorthand: 'Password',
         date: { type: 'Date' },
         dateTime: { type: 'DateTime', yearStart: 2000, yearEnd: 1980 },
 
         //List
         textList: { type: 'List', itemType: 'Text', validators: ['required'] },
-        objList: { type: 'List', itemType: 'Object', subSchema: {
+        /*objList: { type: 'List', itemType: 'Object', subSchema: {
           name: { type: 'Text', validators: ['required'] },
           age: 'Number'
-        } },
+        } },*/
 		
 		//Repeater
         //textRepeater: { type: 'Repeater', itemType: 'Text', validators: ['required'] },
 		//nestedRepeater: { type: 'Repeater', itemType: 'NestedModel', model: RepeaterModel },
-		nestedRepeaterModel: { type: 'Repeater', layout:'vertical', model: NestedRepeaterModel }
+		weightGroup: { type: 'Repeater', layout:'vertical', model: WeightGroupModel, max:2, min:2 }
       };
       
       var model = new Backbone.Model({
@@ -168,7 +168,7 @@
         hidden: 'secret!',
         checkbox: true,
         textList: ['item1', 'item2', 'item3'],
-		nestedRepeaterModel: [{nested:[{name:'name', email:'email'}]}]
+        weightGroup: [{weight:[{name:'name', email:'email'}]}]
       });
 
       var form = new Backbone.Form({
@@ -177,7 +177,7 @@
         fieldsets: [
           ['email', 'tel', 'number', 'hidden', 'checkbox', 'radio', 'select', 'groupSelect', 'checkboxes', 'customTemplate', 'shorthand', 'date', 'dateTime'],
           { legend: 'Lists', fields: ['textList', 'objList'] },
-		  { legend: 'Repeaters', fields: ['textRepeater', 'nestedRepeater','nestedRepeaterModel'] },
+		  { legend: 'Repeaters', fields: ['textRepeater', 'nestedRepeater','weightGroup'] },
           { legend: 'Nested editors', fields: ['object', 'nestedModel'] }
         ]
       });
@@ -194,7 +194,7 @@
 		console.log(form.getValue(key))
       });
       
-      $('#uiTest button.validate').click(function() { form.validate() });
+      $('#uiTest button.validate').click(function() { alert("is valid form: " + JSON.stringify(form.validate())) });
 	  $('#uiTest button.pull').click(function() { alert("data-All" + JSON.stringify(form.getValue())) });
 	  
 	  //form.getValue()

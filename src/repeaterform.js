@@ -60,9 +60,6 @@ var RepeaterForm = Form.extend({
     	this.template = options.template || constructor.template;
     }
     
-    //alert(JSON.stringify(this.schema));
-    //this.templateData = {title: this.createTitle("hej") };
-    
     this.Fieldset = options.Fieldset || constructor.Fieldset;
     this.Field = options.Field || constructor.Field;
     this.NestedField = options.NestedField || constructor.NestedField;
@@ -72,7 +69,6 @@ var RepeaterForm = Form.extend({
 
     //Create fields
     var fields = this.fields = {};
-    
     
     _.each(selectedFields, function(key) {
       var fieldSchema = schema[key];
@@ -87,7 +83,7 @@ var RepeaterForm = Form.extend({
       this.fieldsets.push(this.createFieldset(itemSchema));
     }, this);
   },
-
+	  
   /**
    * Creates a Field instance
    *
@@ -97,13 +93,13 @@ var RepeaterForm = Form.extend({
    * @return {Form.Field}
    */
   createField: function(key, schema) {
-	
+  	
     if(this.layout === 'vertical') {
     	var fieldTemplate = this.constructor.verticalFieldTemplate;
     } else {
     	var fieldTemplate = this.constructor.fieldTemplate;
     } 
-	  
+    
 	var options = {
       form: this,
       key: key,

@@ -21,6 +21,7 @@ Form.editors.RepeaterRow = Form.editors.Base.extend({
   },
     
   initialize: function(options) {
+	
     Form.editors.Base.prototype.initialize.call(this, options);
     this.repeater = options.repeater;
     if (!this.form) throw 'Missing required option "form"';
@@ -34,10 +35,6 @@ Form.editors.RepeaterRow = Form.editors.Base.extend({
     
     //Wrap the data in a model if it isn't already a model instance
     var modelInstance = (data.constructor === repeaterRow) ? data : new repeaterRow(data);
-    
-    //alert(JSON.stringify(this.schema) + " # " + JSON.stringify(modelInstance));
-    
-    
     
     this.nestedForm = new Backbone.RepeaterForm({
 	  model: modelInstance,

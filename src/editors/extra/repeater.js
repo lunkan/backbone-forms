@@ -29,13 +29,14 @@
       var editors = Form.editors;
 
       editors.Base.prototype.initialize.call(this, options);
-
       var schema = this.schema;
       if (!schema) throw "Missing required option 'schema'";
 
       this.caption = this.createTitle(this.schema.title);
       this.headers = this.createHeaders(this.schema.model);
+      this.addLabel = "Add " + this.createTitle(this.schema.title);
       
+      //Set display layout - default to 'horizontal'
       this.schema.layout = this.schema.layout || 'horizontal';
       if(this.schema.layout == 'vertical') {
     	  this.template = options.template || this.constructor.verticalTemplate;
@@ -43,21 +44,10 @@
     	  this.template = options.template || this.constructor.template;
       }
 
-      //Determine the editor to use
-      this.Editor = (function() {
-        //var type = schema.itemType;
-
-		return editors.RepeaterRow;
-
-        //Or whichever was passed
-        //return editors[type];
-      })();
-
       this.items = [];
     },
 
     createTitle: function(str) {
-    	
       str = str.replace(/([A-Z])/g, ' $1');
       str = str.replace(/^./, function(str) { return str.toUpperCase(); });
       return str;
@@ -81,7 +71,7 @@
       var self = this,
           value = this.value || [];
 
-      var $el = $($.trim(this.template({repeaterId:this.id, caption: self.caption, headers: self.headers})));
+      var $el = $($.trim(this.template({repeaterId:this.id, caption: self.caption, headers: self.headers, addLabel: self.addLabel})));
 
       //Store a reference to the repeater (item container)
       this.$repeater = $el.is('[data-items]') ? $el : $el.find('[data-items]');
@@ -93,11 +83,19 @@
         });
       }
 
+      //Add items as long as less than min
+      var minNumItems = this.schema.min || 0;
+      while(this.items.length < minNumItems) {
+    	  this.addItem(null);
+      }
+      
       this.setElement($el);
       this.$el.attr('id', this.id);
       this.$el.attr('name', this.key);
             
       if (this.hasFocus) this.trigger('blur', this);
+      
+      this.invalidateCollection();
       
       return this;
     },
@@ -171,16 +169,23 @@
       };
       
       //Check if we need to wait for the item to complete before adding to the repeater
-      if (this.Editor.isAsync) {
+      /*if (this.Editor.isAsync) {
         item.editor.on('readyToAdd', _addItem, this);
       }
 
       //Most editors can be added automatically
-      else {
+      else {*/
         _addItem();
         //item.editor.focus();
-      }
+      //}
       
+        //$("input").prop('disabled', true);
+        //$("input").prop('disabled', false);
+        
+      
+        
+       this.invalidateCollection();
+        
       return item;
     },
 
@@ -203,8 +208,23 @@
         this.trigger('remove', this, item.editor);
         this.trigger('change', this);
       }
+      
+      this.invalidateCollection();
+      
     },
 
+    invalidateCollection: function() {
+    	
+    	//Disable add button if max number of items is reached
+        if(this.schema.max) {
+      	  if(this.items.length >= this.schema.max) {
+      		  this.$('[data-target="'+this.id+'"]').prop('disabled', true);
+      	  } else {
+      		  this.$('[data-target="'+this.id+'"]').prop('disabled', false);
+      	  }
+        }
+    },
+    
     getValue: function() {
       var values = _.map(this.items, function(item) {
         return item.getValue();
@@ -241,6 +261,23 @@
       Form.editors.Base.prototype.remove.call(this);
     },
     
+    setError: function(msg) {
+      //Add error CSS class
+      this.$el.addClass('error');
+
+      //Set error message
+      this.$('#error-'+this.id).html(msg);
+    },
+    
+    clearError: function() {
+      //Remove error CSS class
+      this.$el.removeClass('error');
+
+      //Clear error message
+  	  //Jonas - changed to error id to avoid nested clear
+  	  this.$('#error-'+this.id).empty();
+    },
+    
     /**
      * Run validation
      * 
@@ -248,17 +285,53 @@
      */
     validate: function() {
 	  
-      //Collect errors
-      var errors = _.map(this.items, function(item) {
-        return item.validate();
+      //Collect item errors
+      var errors = [];
+      _.each(this.items, function(item) {
+        var itemErrors = item.validate();
+        if(itemErrors) {
+        	errors.push(itemErrors);
+        }
       });
-
+      
+      //Validate max number of items
+      if(this.schema.max) {
+    	  if(this.items.length > this.schema.max) {
+    		  var repeaterError = {};
+    		  repeaterError[this.key] = { type:"max", message:"Maximum number of items is "+this.schema.max };
+    		  repeaterErrors.push(repeaterError);
+    	  }
+      }
+      
+      //Validate min number of items
+      var repeaterErrors = [];
+      if(this.schema.min) {
+    	  if(this.items.length < this.schema.min) {
+    		  var repeaterError = {};
+    		  repeaterError[this.key] = { type:"min", message:"Minimum number of items is "+this.schema.min };
+    		  repeaterErrors.push(repeaterError);
+    	  }
+      }
+      
+      if(repeaterErrors.length > 0) {
+    	  this.setError(repeaterErrors[0].weight.message);
+    	  errors = errors.concat(repeaterErrors);
+      } else {
+    	  this.clearError();
+      }
+      
 	  //Don't bother about error messages (maybe with max/min rows)
-	  return null;
+      if(errors.length == 0) {
+    	return null;
+      } else {
+	  	return errors;
+      }
     }
   }, {
   
     template: _.template('\
+    <div>\
+      <div id="error-<%= repeaterId %>"></div>\
       <table class="repeater-wrapper">\
 		<thead>\
     	  <tr>\
@@ -270,24 +343,29 @@
         </thead>\
 		<tfoot>\
 		  <tr>\
-            <th colspan="<%= (headers.length+1) %>"><button data-target="<%= repeaterId %>" type="button" data-action="add">Add</button></th>\
+            <th colspan="<%= (headers.length+1) %>"><button data-target="<%= repeaterId %>" type="button" data-action="add"><%= addLabel %></button></th>\
           </tr>\
 		</tfoot>\
 		<tbody data-items>\
         </tbody>\
       </table>\
+    <div>\
     ', null, Form.templateSettings),
     
     verticalTemplate: _.template('\
+    <div>\
+      <div id="error-<%= repeaterId %>"></div>\
       <table class="repeater-wrapper">\
 		<tfoot>\
 		  <tr>\
-            <th colspan="2"><button data-target="<%= repeaterId %>" type="button" data-action="add">Add</button></th>\
+            <th colspan="2"><button data-target="<%= repeaterId %>" type="button" data-action="add"><%= addLabel %></button>\
+    		</th>\
           </tr>\
 		</tfoot>\
 		<tbody data-items>\
         </tbody>\
       </table>\
+    <div>\
     ', null, Form.templateSettings)
 
   });
