@@ -45,3 +45,11 @@ BootstrapForm.Field = Form.Field.extend(null, {
 Form.editors.BootstrapText = Form.editors.Text.extend({
   attributes: {'class':'form-control'}
 });
+
+Form.editors.BootstrapCheckbox = Form.editors.Checkbox.extend({
+  attributes: {'class':'form-control'}
+});
+
+Form.editors.BootstrapNumber = Form.editors.Number.extend({
+  attributes: {'class':'form-control'}
+});

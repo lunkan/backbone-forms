@@ -353,7 +353,7 @@
     template: _.template('\
     <div>\
       <div id="error-<%= repeaterId %>"></div>\
-      <table class="<%= tableClasses %>">\
+      <table>\
 		<thead>\
     	  <tr>\
     	  <% _.each(headers, function(value) { %>\
@@ -376,7 +376,7 @@
     verticalTemplate: _.template('\
     <div>\
       <div id="error-<%= repeaterId %>"></div>\
-      <table class="<%= tableClasses %>">\
+      <table">\
 		<tfoot>\
 		  <tr>\
             <th colspan="2"><button data-target="<%= repeaterId %>" type="button" data-action="add"><%= addLabel %></button>\

@@ -52,8 +52,14 @@ Form.editors.RepeaterRow = Form.editors.Base.extend({
 
     this._observeFormEvents();
     
+    //Render fields
     var $el = $(this.nestedForm.render().el);
-    $el.append('<td><button type="button" data-target="'+this.id+'" data-action="remove">&times;</button></td>')
+    
+    //Render remove button
+    var $removeButton = $($.trim(this.constructor.removeButtonTemplate({ itemId:this.id })));
+    $el.append($removeButton);
+    		
+    //$el.append('<td><button type="button" data-target="'+this.id+'" data-action="remove">&times;</button></td>');
     this.setElement($el);
     
     if (this.hasFocus) this.trigger('blur', this);
@@ -126,4 +132,8 @@ Form.editors.RepeaterRow = Form.editors.Base.extend({
     }, this);
   }
 
+}, {
+  removeButtonTemplate: _.template('\
+	  <td><button type="button" data-target="<%= itemId %>" data-action="remove" class="btn pull-right">&times;</button></td>\
+	', null, this.templateSettings)
 });

@@ -74,7 +74,11 @@
 	    },
         schema: {
           name: { type: 'BootstrapText', validators: ['required']},
-          email: { type: 'BootstrapText', validators: ['required', 'email'], help: 'Must be valid' }
+          email: { type: 'BootstrapText', validators: ['required', 'email'], help: 'Must be valid' },
+		  number: { type: 'BootstrapNumber', validators: [/[0-9]+(?:\.[0-9]*)?/] },
+		  checkbox: { type: 'BootstrapCheckbox' },
+		  radio: { type: 'Radio', options: ['Opt 1', 'Opt 2'] },
+		  select: { type: 'Select', options: ['Opt 1', 'Opt 2'] }
         }
       });
 	  
