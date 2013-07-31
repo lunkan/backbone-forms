@@ -8,8 +8,6 @@
  */
 Form.editors.RepeaterRow = Form.editors.Base.extend({
 
-  hasNestedForm: true,
-  
   events: {
       'click [data-action="remove"]': function(e) {
         e.preventDefault();
@@ -24,23 +22,32 @@ Form.editors.RepeaterRow = Form.editors.Base.extend({
 	
     Form.editors.Base.prototype.initialize.call(this, options);
     this.repeater = options.repeater;
+    this.Field = options.Field;
+    this.Fieldset = options.Fieldset;
     if (!this.form) throw 'Missing required option "form"';
-    if (!options.schema.model) throw 'Missing required "schema.model" option for RepeaterRow editor';
+    if (!options.schema.model && !options.schema.subSchema) throw 'Missing required "schema.model" option for RepeaterRow editor';
   },
 
   render: function() {
     var data = this.value || {},
-        key = this.key,
-        repeaterRow = this.schema.model;
+        key = this.key;
+        
     
     //Wrap the data in a model if it isn't already a model instance
-    var modelInstance = (data.constructor === repeaterRow) ? data : new repeaterRow(data);
+    var modelInstance = null;
+    if(this.schema.model) {
+    	var repeaterRow = this.schema.model;
+    	var modelInstance = (data.constructor === repeaterRow) ? data : new repeaterRow(data);
+    }
     
-    this.nestedForm = new Backbone.RepeaterForm({
+    this.nestedForm = new RepeaterForm({
 	  model: modelInstance,
+	  schema: this.schema.subSchema,
       idPrefix: this.id + '_',
       fieldTemplate: 'field',
-      layout: this.schema.layout
+      layout: this.schema.layout,
+      Field: this.Field,
+      Fieldset: this.Fieldset
     });
 
     this._observeFormEvents();

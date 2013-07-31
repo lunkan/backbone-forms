@@ -1,0 +1,135 @@
+<!--
+  TESTS FOR DEVELOPMENT
+  These use the individual source files. Use this while developing
+-->
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <link rel="stylesheet" href="../distribution/templates/bootstrap.css" type="text/css" media="screen" />
+  
+  <!-- SRC LIB FILES -->
+  <script src="lib/jquery.js"></script>
+
+  <script src="lib/underscore-1.4.4.js"></script>
+  <script src="lib/backbone-1.0.0.js"></script>
+  <script src="lib/backbone-deep-model-0.10.1.js"></script>
+
+  <!-- SOURCE FILES -->
+  <script src="../src/form.js"></script>
+  <script src="../src/validators.js"></script>
+  <script src="../src/fieldset.js"></script>
+  <script src="../src/field.js"></script>
+  <script src="../src/nestedField.js"></script>
+  <script src="../src/editor.js"></script>
+
+  <script src="../src/editors/text.js"></script>
+  <script src="../src/editors/textarea.js"></script>
+  <script src="../src/editors/password.js"></script>
+  <script src="../src/editors/number.js"></script>
+  <script src="../src/editors/hidden.js"></script>
+  <script src="../src/editors/checkbox.js"></script>
+  <script src="../src/editors/select.js"></script>
+  <script src="../src/editors/radio.js"></script>
+  <script src="../src/editors/checkboxes.js"></script>
+  <script src="../src/editors/object.js"></script>
+  <script src="../src/editors/nestedmodel.js"></script>
+  <script src="../src/repeaterform.js"></script>
+  
+  <script src="../src/editors/repeaterrow.js"></script>
+  <script src="../src/editors/date.js"></script>
+  <script src="../src/editors/datetime.js"></script>
+
+  <script>Backbone.Form = Form</script>
+  <script>Backbone.RepeaterForm = RepeaterForm</script>
+	
+  <script src="../src/editors/extra/list.js"></script>
+  <script src="../src/editors/extra/repeater.js"></script>
+  
+  <!-- Skin -->
+  <link rel="stylesheet" href="../skin/bootstrap/css/bootstrap.min.css" type="text/css" media="screen" />
+  <script src="../skin/bootstrap/bootstrap-skin.js"></script>
+  <script src="../skin/bootstrap/editors/extra/bootstrap-repeater.js"></script>
+  
+</head>
+<body>
+  <div id="qunit"></div>
+  <div id="qunit-fixture">
+    <div id='testElement'>
+      <h1>Test</h1>
+    </div>
+  </div>
+  
+  <div id="uiTest" >
+    <div id="formContainer"></div>
+    <button class="validate">Validate</button>
+	<button class="pull">Get data</button>
+  </div>
+  <script>
+    $(function() {
+      
+	  var WeightModel = Backbone.Model.extend({
+		defaults: {
+	      name:"no-name"
+	    },
+        schema: {
+          name: { type: 'BootstrapText', validators: ['required']},
+          email: { type: 'BootstrapText', validators: ['required', 'email'], help: 'Must be valid' }
+        }
+      });
+	  
+	  var WeightGroupModel = Backbone.Model.extend({
+	    schema: {
+          weight: { type: 'BootstrapRepeater', model: WeightModel, max:3, min:1, help: 'Minimum 1 element' }
+        }
+      });
+        
+      var schema = {
+        email:      { dataType: 'email', validators: ['required', 'email'] },
+		repeaterTable: { type: 'BootstrapRepeater', min:1, help: 'Min 2', model: WeightModel },
+		repeaterList: { type: 'BootstrapRepeater', layout:'vertical', min:1, help: 'Min 2', subSchema: {
+          firstName: { type: 'BootstrapText'},
+		  lastName: { type: 'BootstrapText'}
+        }},
+		weightList: { type: 'BootstrapRepeater', max:10, help: 'Min 2, Max 2 elements', subSchema: {
+          suba: { type: 'BootstrapText'},
+          subb: { type: 'BootstrapText'}
+        }},
+        weightGroup: { type: 'BootstrapRepeater', layout:'vertical', model: WeightGroupModel, max:2, min:2, help: 'Min 2, Max 2 elements' }
+      };
+      
+      var model = new Backbone.Model({
+        weightGroup: [{weight:[{name:'name', email:'email'}]}]
+      });
+
+      var form = new BootstrapForm({
+    	model: model,
+        schema: schema,
+        fieldsets: [
+          ['email'],
+		  { legend: 'Repeaters', fields: ['repeaterTable','repeaterList','weightList','weightGroup'] }
+        ]
+      });
+      
+      window.form = form;
+
+      $('#uiTest #formContainer').html(form.render().el);
+
+      $('#uiTest label').click(function() {
+        var name = $(this).attr('for'),
+            $editor = $('#' + name),
+            key = $editor.attr('name');
+
+		console.log(form.getValue(key))
+      });
+      
+      $('#uiTest button.validate').click(function() { alert("is valid form: " + JSON.stringify(form.validate())) });
+	  $('#uiTest button.pull').click(function() { alert("data-All" + JSON.stringify(form.getValue())) });
+	  
+	  //form.getValue()
+	  
+    });
+  </script>
+  
+</body>
+</html>

@@ -23,7 +23,6 @@ var RepeaterForm = Form.extend({
 	
     options = options || {};
     
-    
     //Find the schema to use
     var schema = this.schema = (function() {
       
@@ -60,10 +59,10 @@ var RepeaterForm = Form.extend({
     	this.template = options.template || constructor.template;
     }
     
-    this.Fieldset = options.Fieldset || constructor.Fieldset;
-    this.Field = options.Field || constructor.Field;
-    this.NestedField = options.NestedField || constructor.NestedField;
-
+    this.Fieldset = options.Fieldset || constructor.Fieldset;//BootstrapForm.Fieldset;//
+    this.Field = options.Field || constructor.Field;//BootstrapForm.Field;//
+    //this.NestedField = options.NestedField || constructor.NestedField;
+    
     //Check which fields will be included (defaults to all)
     var selectedFields = this.selectedFields = options.fields || _.keys(schema);
 
@@ -175,7 +174,7 @@ var RepeaterForm = Form.extend({
         $container.append(field.render().el);
       });
     });*/
-
+    
     //Render fieldsets
     $form.find('[data-fieldsets]').add($form).each(function(i, el) {
       var $container = $(el),
@@ -202,12 +201,12 @@ var RepeaterForm = Form.extend({
 }, {
 
   fieldTemplate: _.template('\
-    <td class="field row-field">\
-      <div class="field-wrapper">\
-        <div data-editor></div>\
-        <div id="error-<%= editorId %>" data-error></div>\
-        <div><%= help %></div>\
-      </div>\
+    <td class="form-group">\
+      <div data-editor></div>\
+	  <div class="help-block">\
+	    <span id="error-<%= editorId %>" data-error class="text-danger"></span>\
+	    <small class="text-muted"><%= help %></small>\
+	  </div>\
     </td>\
   ', null, Form.templateSettings),
 			  
@@ -219,12 +218,12 @@ var RepeaterForm = Form.extend({
   verticalFieldTemplate: _.template('\
     <tr>\
 	  <th><%= title %></th>\
-      <td class="field row-field">\
-        <div class="field-wrapper">\
-          <div data-editor></div>\
-          <div id="error-<%= editorId %>" data-error></div>\
-          <div><%= help %></div>\
-        </div>\
+      <td class="form-group">\
+        <div data-editor></div>\
+		<div class="help-block">\
+		  <span id="error-<%= editorId %>" data-error class="text-danger"></span>\
+		  <small class="text-muted"><%= help %></small>\
+		</div>\
       </td>\
 	</tr>\
   ', null, Form.templateSettings),
@@ -232,7 +231,7 @@ var RepeaterForm = Form.extend({
   verticalTemplate: _.template('\
     <tr class="repeater-form">\
 	  <td>\
-		  <table>\
+		  <table class="table table-bordered">\
 		  	<tbody data-fieldsets>\
 		    </tbody>\
 		  </table>\
@@ -246,6 +245,8 @@ var RepeaterForm = Form.extend({
     escape: /<%-([\s\S]+?)%>/g
   },
 
-  editors: {}
+  editors: {},
+  
+  errorClassName: 'has-error'
 
 });

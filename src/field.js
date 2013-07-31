@@ -26,7 +26,7 @@ Form.Field = Backbone.View.extend({
 
     //Create the full field schema, merging defaults etc.
     var schema = this.schema = this.createSchema(options.schema);
-
+    
     //Override defaults
     this.template = options.template || schema.template || this.constructor.template;
     this.errorClassName = options.errorClassName || this.constructor.errorClassName;
@@ -50,7 +50,7 @@ Form.Field = Backbone.View.extend({
       type: 'Text',
       title: this.createTitle()
     }, schema);
-
+    
     //Get the real constructor function i.e. if type is a string such as 'Text'
     schema.type = (_.isString(schema.type)) ? Form.editors[schema.type] : schema.type;
 
@@ -194,10 +194,13 @@ Form.Field = Backbone.View.extend({
     if (this.editor.hasNestedForm) return;
 
     //Add error CSS class
-    this.$el.addClass(this.errorClassName);
-
-    //Set error message
-    this.$('[data-error]').html(msg);
+    //Jonas added - errors may be nested - display only errors in same level = no array
+    if(msg) {
+	    this.$el.addClass(this.errorClassName);
+	
+	    //Set error message
+	    this.$('[data-error]').html(msg);
+    }
   },
 
   /**

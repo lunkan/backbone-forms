@@ -28,12 +28,20 @@
 
       var editors = Form.editors;
 
+    //Override defaults
+      /*var constructor = this.constructor;
+      this.template = options.template || constructor.template;
+      this.Fieldset = options.Fieldset || constructor.Fieldset;
+      this.Field = options.Field || constructor.Field;
+      this.NestedField = options.NestedField || constructor.NestedField;*/
+      //alert("tmp: " + options.template + " s: " + JSON.stringify(this.form.template));
+      
       editors.Base.prototype.initialize.call(this, options);
       var schema = this.schema;
       if (!schema) throw "Missing required option 'schema'";
-
+      
       this.caption = this.createTitle(this.schema.title);
-      this.headers = this.createHeaders(this.schema.model);
+      this.headers = this.createHeaders();
       this.addLabel = "Add " + this.createTitle(this.schema.title);
       
       //Set display layout - default to 'horizontal'
@@ -53,16 +61,26 @@
       return str;
     },
     
-    createHeaders: function(model) {
+    createHeaders: function() {
     	
-      var self = this;
-      var modelInstance = new model({});
-        
-      var headers = [];
-      _.each(modelInstance.schema, function(value, key) {
-	    var header = self.createTitle(key);
-	    headers.push(header);
-	  });
+	  var self = this;
+	  var headers = [];
+	
+	  if(this.schema.subSchema) {
+	    _.each(this.schema.subSchema, function(value, key) {
+	      var header = self.createTitle(key);
+		  headers.push(header);
+	    });
+      } else if(this.schema.model) {
+    	var model = this.schema.model;
+    	var modelInstance = new model({});
+        _.each(modelInstance.schema, function(value, key) {
+    	  var header = self.createTitle(key);
+    	  headers.push(header);
+        });
+      } else {
+  	    throw "Missing item 'schema'";
+      }
       
       return headers;
     },
@@ -110,6 +128,10 @@
       var self = this,
           editors = Form.editors;
       
+      
+      //fieldsetConstructor: this.constructor.Fieldset,
+      //fieldConstructor: this.constructor.Field
+      
       var item = new editors.RepeaterRow({
   		id: this.id,
         key: this.key,
@@ -117,7 +139,9 @@
         value: value,
         repeater: this,
         item: this,
-        form: this.form
+        form: this.form,
+        Field: this.constructor.Field,
+        Fieldset: this.constructor.Fieldset
       });
       item.id = this.id + '-item-' + item.cid;
       item.render();
@@ -262,20 +286,13 @@
     },
     
     setError: function(msg) {
-      //Add error CSS class
-      this.$el.addClass('error');
-
-      //Set error message
-      this.$('#error-'+this.id).html(msg);
+      //Todo:field target an id field of the parent element - can it be changed?
+      //Target id instead of tag, becouse forms may be nested
+      $('#error-'+this.id).html(msg);
     },
     
     clearError: function() {
-      //Remove error CSS class
-      this.$el.removeClass('error');
-
-      //Clear error message
-  	  //Jonas - changed to error id to avoid nested clear
-  	  this.$('#error-'+this.id).empty();
+      $('#error-'+this.id).empty();
     },
     
     /**
@@ -314,7 +331,11 @@
       }
       
       if(repeaterErrors.length > 0) {
-    	  this.setError(repeaterErrors[0].weight.message);
+    	  for (var key in repeaterErrors[0]) {
+    		this.setError(repeaterErrors[0][key].message);
+    		break;
+    	  }
+    	  
     	  errors = errors.concat(repeaterErrors);
       } else {
     	  this.clearError();
@@ -332,7 +353,7 @@
     template: _.template('\
     <div>\
       <div id="error-<%= repeaterId %>"></div>\
-      <table class="repeater-wrapper">\
+      <table class="<%= tableClasses %>">\
 		<thead>\
     	  <tr>\
     	  <% _.each(headers, function(value) { %>\
@@ -355,7 +376,7 @@
     verticalTemplate: _.template('\
     <div>\
       <div id="error-<%= repeaterId %>"></div>\
-      <table class="repeater-wrapper">\
+      <table class="<%= tableClasses %>">\
 		<tfoot>\
 		  <tr>\
             <th colspan="2"><button data-target="<%= repeaterId %>" type="button" data-action="add"><%= addLabel %></button>\
@@ -366,144 +387,11 @@
         </tbody>\
       </table>\
     <div>\
-    ', null, Form.templateSettings)
+    ', null, Form.templateSettings),
+    
+    Fieldset: Form.Fieldset,
+    Field: Form.Field
 
   });
-
-
-  /**
-   * A single item in the repeater
-   *
-   * @param {editors.Repeater} options.repeater The Repeater editor instance this item belongs to
-   * @param {Function} options.Editor   Editor constructor function
-   * @param {String} options.key        Model key
-   * @param {Mixed} options.value       Value
-   * @param {Object} options.schema     Field schema
-   */
-  /*Form.editors.Repeater.Item = Form.editors.Base.extend({
-
-    events: {
-      'click [data-action="remove"]': function(event) {
-        event.preventDefault();
-        this.repeater.removeItem(this);
-      }
-    },
-
-    initialize: function(options) {
-	  this.id = options.id;
-	  this.repeater = options.repeater;
-      this.schema = options.schema || this.repeater.schema;
-      this.value = options.value;
-      this.Editor = options.Editor || Form.editors.Text;
-      this.key = options.key;
-      this.template = options.template || this.schema.itemTemplate || this.constructor.template;
-      this.errorClassName = options.errorClassName || this.constructor.errorClassName;
-      this.form = options.form;
-    },
-
-    render: function() {
-	
-	  //Create editor
-      this.editor = new this.Editor({
-		id: this.id,
-        key: this.key,
-        schema: this.schema,
-        value: this.value,
-        repeater: this.repeater,
-        item: this,
-        form: this.form
-      });
-	  
-	  this.editor.render();
-
-      //Create main element
-      var $el = $($.trim(this.template()));
-
-	  //Store a reference to the repeater (item container)
-      this.$item = $el.is('[data-editor]') ? $el : $el.find('[data-editor]');
-	  this.$item.append(this.editor.el);
-
-      //Replace the entire element so there isn't a wrapper tag
-      this.setElement($el);
-        
-      return this;
-    },
-
-    getValue: function() {
-      return this.editor.getValue();
-    },
-
-    setValue: function(value) {
-      this.editor.setValue(value);
-    },
-    
-    focus: function() {
-      this.editor.focus();
-    },
-    
-    blur: function() {
-      this.editor.blur();
-    },
-
-    remove: function() {
-      this.editor.remove();
-      Backbone.View.prototype.remove.call(this);
-    },
-
-    validate: function() {
-
-	  error = this.editor.validate();
-	  
-      //Show/hide error
-      if (error){
-        this.setError(error);
-      } else {
-        this.clearError();
-      }
-
-      //Return error to be aggregated by repeater
-	  return error ? error : null;
-    },
-
-    //Show a validation error
-    setError: function(err) {
-	
-	  //Nested form editors (e.g. Object) set their errors internally
-      if (this.editor.hasNestedForm) return;
-
-      //Add error CSS class
-      this.$el.addClass(this.errorClassName);
-
-      //Set error message
-      this.$('[data-error]').html(err.message);
-    },
-
-    //Hide validation errors
-	clearError: function() {
-	
-	  //Nested form editors (e.g. Object) set their errors internally
-      if (this.editor.hasNestedForm) return;
-	  
-      //Remove error CSS class
-	  this.$el.removeClass(this.errorClassName);
-
-      //Clear error message
-	  this.$('[data-error]').empty();
-	}
-	
-  }, {
-
-    //STATICS
-    template: _.template('\
-      <tbody data-editor class="repeater-item">\
-		<tr>\
-			<td><button type="button" data-action="remove">&times;</button></td>\
-		</tr>\
-      </tbody>\
-    ', null, Form.templateSettings),
-
-    errorClassName: 'error'
-
-  });*/
 
 })(Backbone.Form);
