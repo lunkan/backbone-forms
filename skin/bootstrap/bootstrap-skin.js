@@ -53,3 +53,7 @@ Form.editors.BootstrapCheckbox = Form.editors.Checkbox.extend({
 Form.editors.BootstrapNumber = Form.editors.Number.extend({
   attributes: {'class':'form-control'}
 });
+
+Form.editors.BootstrapSelect = Form.editors.Select.extend({
+  attributes: {'class':'form-control'}
+});

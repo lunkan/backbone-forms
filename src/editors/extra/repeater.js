@@ -56,33 +56,40 @@
     },
 
     createTitle: function(str) {
-      str = str.replace(/([A-Z])/g, ' $1');
-      str = str.replace(/^./, function(str) { return str.toUpperCase(); });
-      return str;
+	  if(str) {
+        str = str.replace(/([A-Z])/g, ' $1');
+        str = str.replace(/^./, function(str) { return str.toUpperCase(); });
+        return str;
+      } else {
+    	  return "No title";
+      }
     },
     
     createHeaders: function() {
     	
-	  var self = this;
-	  var headers = [];
-	
-	  if(this.schema.subSchema) {
-	    _.each(this.schema.subSchema, function(value, key) {
-	      var header = self.createTitle(key);
-		  headers.push(header);
-	    });
-      } else if(this.schema.model) {
-    	var model = this.schema.model;
-    	var modelInstance = new model({});
-        _.each(modelInstance.schema, function(value, key) {
-    	  var header = self.createTitle(key);
-    	  headers.push(header);
-        });
-      } else {
-  	    throw "Missing item 'schema'";
-      }
-      
-      return headers;
+  	  var self = this;
+  	  var headers = [];
+  	  var schemaHeaders = this.schema.headers || {};
+
+  	  if(this.schema.subSchema) {
+  		_.each(this.schema.subSchema, function(value, key) {
+  			var headerText = schemaHeaders[key] || self.createTitle(key);
+  	    	var header = { title: headerText, help:value.help };
+  		    headers.push(header);
+  	    });
+        } else if(this.schema.model) {
+      	var model = this.schema.model;
+      	var modelInstance = new model({});
+      	_.each(modelInstance.schema, function(value, key) {
+      	  var headerText = schemaHeaders[key] || self.createTitle(key);
+      	  var header = { title: headerText, help:value.help };
+      	  headers.push(header);
+          });
+        } else {
+    	    throw "Missing item 'schema'";
+        }
+        
+        return headers;
     },
     
     render: function() {
@@ -132,7 +139,8 @@
       //fieldsetConstructor: this.constructor.Fieldset,
       //fieldConstructor: this.constructor.Field
       
-      var item = new editors.RepeaterRow({
+      //var item = new editors.RepeaterRow({
+      var item = new editors.Repeater.Item({
   		id: this.id,
         key: this.key,
         schema: this.schema,
@@ -194,12 +202,14 @@
       
       //Check if we need to wait for the item to complete before adding to the repeater
       /*if (this.Editor.isAsync) {
+    	  alert("!async");
         item.editor.on('readyToAdd', _addItem, this);
       }
-
-      //Most editors can be added automatically
-      else {*/
+      else {
+    	  alert("!not async");*/
         _addItem();
+      //}  
+        
         //item.editor.focus();
       //}
       
@@ -354,10 +364,19 @@
     <div>\
       <div id="error-<%= repeaterId %>"></div>\
       <table>\
+        <colgroup>\
+  		  <% _.each(headers, function(header, index) { %>\
+      	  <col class="col-<%= index %>">\
+      	  <% }); %>\
+      	  <col class="col-<%= headers.length %>">\
+      	</colgroup>\
 		<thead>\
     	  <tr>\
-    	  <% _.each(headers, function(value) { %>\
-		    <th><%= value %></th>\
+    	  <% _.each(headers, function(header) { %>\
+		    <th>\
+				<%= header.title %><br>\
+				<small class="text-muted"><%= header.help %></small>\
+			</th>\
 		  <% }); %>\
     		<th></th>\
           </tr>\
@@ -373,13 +392,39 @@
     <div>\
     ', null, Form.templateSettings),
     
-    verticalTemplate: _.template('\
-    <div>\
+    /*<div>\
+      <table class="table table-bordered">\
+		<tfoot class="your foot">\
+		  <tr>\
+            <th colspan="2"><button class="btn btn-primary pull-right" data-target="<%= repeaterId %>" type="button" data-action="add"><%= addLabel %></button>\
+    		</th>\
+          </tr>\
+		</tfoot>\
+		<tbody data-items>\
+        </tbody>\
+      </table>\
+    <div>\*/
+    
+    /*<div>\
       <div id="error-<%= repeaterId %>"></div>\
       <table">\
 		<tfoot>\
 		  <tr>\
             <th colspan="2"><button data-target="<%= repeaterId %>" type="button" data-action="add"><%= addLabel %></button>\
+    		</th>\
+          </tr>\
+		</tfoot>\
+		<tbody data-items>\
+        </tbody>\
+      </table>\
+    <div>\*/
+    
+    verticalTemplate: _.template('\
+	<div>\
+      <table>\
+		<tfoot>\
+		  <tr>\
+            <th colspan="2"><button class="btn btn-primary pull-right" data-target="<%= repeaterId %>" type="button" data-action="add"><%= addLabel %></button>\
     		</th>\
           </tr>\
 		</tfoot>\
@@ -393,5 +438,394 @@
     Field: Form.Field
 
   });
+  
+  /**
+   * RepeaterRow editor
+   *
+   * Creates a child form. For editing nested Backbone models
+   *
+   * Special options:
+   *   schema.model:   Embedded model constructor
+   */
+  //Form.editors.RepeaterRow = Form.editors.Base.extend({
+  Form.editors.Repeater.Item = Form.editors.Base.extend({
+
+    events: {
+        'click [data-action="remove"]': function(e) {
+          e.preventDefault();
+          if($(e.currentTarget).attr("data-target") != this.id)
+  			return;
+          
+          this.repeater.removeItem(this);
+        }
+    },
+      
+    initialize: function(options) {
+  	
+      Form.editors.Base.prototype.initialize.call(this, options);
+      this.repeater = options.repeater;
+      this.Field = options.Field;
+      this.Fieldset = options.Fieldset;
+      if (!this.form) throw 'Missing required option "form"';
+      if (!options.schema.model && !options.schema.subSchema) throw 'Missing required "schema.model" option for RepeaterRow editor';
+    },
+
+    render: function() {
+      var data = this.value || {},
+          key = this.key;
+          
+      
+      //Wrap the data in a model if it isn't already a model instance
+      var modelInstance = null;
+      if(this.schema.model) {
+      	var repeaterRow = this.schema.model;
+      	var modelInstance = (data.constructor === repeaterRow) ? data : new repeaterRow(data);
+      }
+      
+      //this.nestedForm = new RepeaterForm({
+      this.nestedForm = new Form.editors.Repeater.Form({
+  	    model: modelInstance,
+  	    schema: this.schema.subSchema,
+        idPrefix: this.id + '_',
+        fieldTemplate: 'field',
+        layout: this.schema.layout,
+        Field: this.Field,
+        Fieldset: this.Fieldset
+      });
+
+      this._observeFormEvents();
+      
+      //Render fields
+      var $el = $(this.nestedForm.render().el);
+      
+      //Render remove button
+      var $removeButton = $($.trim(this.constructor.removeButtonTemplate({ itemId:this.id })));
+      $el.append($removeButton);
+      		
+      //$el.append('<td><button type="button" data-target="'+this.id+'" data-action="remove">&times;</button></td>');
+      this.setElement($el);
+      
+      if (this.hasFocus) this.trigger('blur', this);
+
+      return this;
+    },
+
+    /**
+     * Update the embedded model, checking for nested validation errors and pass them up
+     * Then update the main model if all OK
+     *
+     * @return {Error|null} Validation error or null
+     */
+    commit: function() {
+      var error = this.nestedForm.commit();
+      if (error) {
+        this.$el.addClass('error');
+        return error;
+      }
+
+      //Change!!!
+      return Form.editors.Object.prototype.commit.call(this);
+    },
+
+    /**
+     * J starts
+     */
+    getValue: function() {
+      if (this.nestedForm) return this.nestedForm.getValue();
+
+      return this.value;
+    },
+
+    setValue: function(value) {
+      this.value = value;
+
+      this.render();
+    },
+
+    focus: function() {
+      if (this.hasFocus) return;
+
+      this.nestedForm.focus();
+    },
+
+    blur: function() {
+      if (!this.hasFocus) return;
+
+      this.nestedForm.blur();
+    },
+
+    remove: function() {
+      this.nestedForm.remove();
+
+      Backbone.View.prototype.remove.call(this);
+    },
+
+    validate: function() {
+      return this.nestedForm.validate();
+    },
+
+    _observeFormEvents: function() {
+      if (!this.nestedForm) return;
+      
+      this.nestedForm.on('all', function() {
+        var args = _.toArray(arguments);
+        args[1] = this;
+
+        this.trigger.apply(this, args);
+      }, this);
+    }
+
+  }, {
+    removeButtonTemplate: _.template('\
+  	  <td><button type="button" data-target="<%= itemId %>" data-action="remove" class="btn pull-right">&times;</button></td>\
+  	', null, this.templateSettings)
+  });
+  
+  Form.editors.Repeater.Form = Form.extend({
+		
+	  /**
+	   * Constructor
+	   * 
+	   * @param {Object} [options.schema]
+	   * @param {Backbone.Model} [options.model]
+	   * @param {Object} [options.data]
+	   * @param {String[]|Object[]} [options.fieldsets]
+	   * @param {String[]} [options.fields]
+	   * @param {String} [options.idPrefix]
+	   * @param {Form.Field} [options.Field]
+	   * @param {Form.Fieldset} [options.Fieldset]
+	   * @param {Function} [options.template]
+	   */
+	  initialize: function(options) {
+		 
+		var self = this;
+		
+	    options = options || {};
+	    
+	    //Find the schema to use
+	    var schema = this.schema = (function() {
+	      
+	      //Prefer schema from options
+	      if (options.schema) return _.result(options, 'schema');
+	      
+	      //Then schema on model
+	      var model = options.model;
+	      if (model && model.schema) {
+	        return (_.isFunction(model.schema)) ? model.schema() : model.schema;
+	      }
+	      
+	      //Then built-in schema
+	      if (self.schema) {
+	        return (_.isFunction(self.schema)) ? self.schema() : self.schema;
+	      }
+	      
+	      //Fallback to empty schema
+	      return {};
+	    })();
+	    
+	    if (!options.layout) throw 'Missing required "layout" option for Repeater.Form'; 	
+	    this.layout = options.layout;
+
+	    //Store important data
+	    _.extend(this, _.pick(options, 'model', 'data', 'idPrefix'));
+
+	    //Override defaults
+	    var constructor = this.constructor;
+	    
+	    if(this.layout === 'vertical') {
+	    	this.template = options.template || constructor.verticalTemplate;
+	    } else {
+	    	this.template = options.template || constructor.template;
+	    }
+	    
+	    this.Fieldset = options.Fieldset || constructor.Fieldset;//BootstrapForm.Fieldset;//
+	    this.Field = options.Field || constructor.Field;//BootstrapForm.Field;//
+	    //this.NestedField = options.NestedField || constructor.NestedField;
+	    
+	    //Check which fields will be included (defaults to all)
+	    var selectedFields = this.selectedFields = options.fields || _.keys(schema);
+
+	    //Create fields
+	    var fields = this.fields = {};
+	    
+	    _.each(selectedFields, function(key) {
+	      var fieldSchema = schema[key];
+	      fields[key] = this.createField(key, fieldSchema);
+	    }, this);
+	    
+	    //Create fieldsets
+	    var fieldsetSchema = options.fieldsets || [selectedFields],
+	        fieldsets = this.fieldsets = [];
+
+	    _.each(fieldsetSchema, function(itemSchema) {
+	      this.fieldsets.push(this.createFieldset(itemSchema));
+	    }, this);
+	  },
+		  
+	  /**
+	   * Creates a Field instance
+	   *
+	   * @param {String} key
+	   * @param {Object} schema       Field schema
+	   *
+	   * @return {Form.Field}
+	   */
+	  createField: function(key, schema) {
+	  	
+	    if(this.layout === 'vertical') {
+	    	var fieldTemplate = this.constructor.verticalFieldTemplate;
+	    } else {
+	    	var fieldTemplate = this.constructor.fieldTemplate;
+	    } 
+	    
+		var options = {
+	      form: this,
+	      key: key,
+	      schema: schema,
+	      idPrefix: this.idPrefix,
+	      template: fieldTemplate
+	    };
+
+	    if (this.model) {
+	      options.model = this.model;
+	    } else if (this.data) {
+	      options.value = this.data[key];
+	    } else {
+	      options.value = null;
+	    }
+
+	    var field = new this.Field(options);
+
+	    this.listenTo(field.editor, 'all', this.handleEditorEvent);
+
+	    return field;
+	  },
+	  
+	  createTitle: function(str) {
+	  	str = str.replace(/([A-Z])/g, ' $1');
+	    str = str.replace(/^./, function(str) { return str.toUpperCase(); });
+	    return str;
+	  },
+	    
+	  render: function() {
+	    var self = this,
+	        fields = this.fields;
+	    
+	    //Render form
+	    var $form = $($.trim(this.template(_.result(this, 'templateData'))));
+	    
+	    //Render standalone editors
+	    /*$form.find('[data-editors]').add($form).each(function(i, el) {
+	      var $container = $(el),
+	          selection = $container.attr('data-editors');
+
+	      if (_.isUndefined(selection)) return;
+
+	      //Work out which fields to include
+	      var keys = (selection == '*')
+	        ? self.selectedFields || _.keys(fields)
+	        : selection.split(',');
+
+	      //Add them
+	      _.each(keys, function(key) {
+	        var field = fields[key];
+
+	        $container.append(field.editor.render().el);
+	      });
+	    });*/
+
+	    //Render standalone fields
+	    /*$form.find('[data-fields]').add($form).each(function(i, el) {
+	      var $container = $(el),
+	          selection = $container.attr('data-fields');
+
+	      if (_.isUndefined(selection)) return;
+
+	      //Work out which fields to include
+	      var keys = (selection == '*')
+	        ? self.selectedFields || _.keys(fields)
+	        : selection.split(',');
+
+	      //Add them
+	      _.each(keys, function(key) {
+	        var field = fields[key];
+
+	        $container.append(field.render().el);
+	      });
+	    });*/
+	    
+	    //Render fieldsets
+	    $form.find('[data-fieldsets]').add($form).each(function(i, el) {
+	      var $container = $(el),
+	          selection = $container.attr('data-fieldsets');
+
+	      if (_.isUndefined(selection)) return;
+
+	      _.each(self.fieldsets, function(fieldset) {
+	    	  	_.each(fieldset.fields, function(field) {
+	    	        $container.append(field.render().el);
+	    	    });
+	      });
+	    });
+
+	    //Set the main element
+	    this.setElement($form);
+	    
+	    //Set class
+	    $form.addClass(this.className);
+
+	    return this;
+	  }
+		  
+	}, {
+
+	  fieldTemplate: _.template('\
+	    <td class="form-group">\
+	      <div data-editor></div>\
+		  <div class="help-block">\
+		    <span id="error-<%= editorId %>" data-error class="text-danger"></span>\
+		  </div>\
+	    </td>\
+	  ', null, Form.templateSettings),
+				  
+	  template: _.template('\
+	    <tr data-fieldsets class="repeater-form">\
+		</tr>\
+	  ', null, this.templateSettings),
+	  
+	  verticalFieldTemplate: _.template('\
+	    <tr>\
+		  <th><%= title %></th>\
+	      <td class="form-group">\
+	        <div data-editor></div>\
+			<div class="help-block">\
+			  <span id="error-<%= editorId %>" data-error class="text-danger"></span>\
+			</div>\
+	      </td>\
+		</tr>\
+	  ', null, Form.templateSettings),
+	  
+	  verticalTemplate: _.template('\
+	    <tr class="repeater-form">\
+		  <td>\
+			  <table class="table table-bordered">\
+			  	<tbody data-fieldsets>\
+			    </tbody>\
+			  </table>\
+		  </td>\
+		</tr>\
+	  ', null, this.templateSettings),
+
+	  templateSettings: {
+	    evaluate: /<%([\s\S]+?)%>/g, 
+	    interpolate: /<%=([\s\S]+?)%>/g, 
+	    escape: /<%-([\s\S]+?)%>/g
+	  },
+
+	  editors: {},
+	  
+	  errorClassName: 'has-error'
+
+	});
 
 })(Backbone.Form);

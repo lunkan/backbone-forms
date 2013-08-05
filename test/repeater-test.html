@@ -34,14 +34,14 @@
   <script src="../src/editors/checkboxes.js"></script>
   <script src="../src/editors/object.js"></script>
   <script src="../src/editors/nestedmodel.js"></script>
-  <script src="../src/repeaterform.js"></script>
+  <!--<script src="../src/repeaterform.js"></script>-->
   
-  <script src="../src/editors/repeaterrow.js"></script>
+  <!--<script src="../src/editors/repeaterrow.js"></script>-->
   <script src="../src/editors/date.js"></script>
   <script src="../src/editors/datetime.js"></script>
 
   <script>Backbone.Form = Form</script>
-  <script>Backbone.RepeaterForm = RepeaterForm</script>
+  <!--<script>Backbone.RepeaterForm = RepeaterForm</script>-->
 	
   <script src="../src/editors/extra/list.js"></script>
   <script src="../src/editors/extra/repeater.js"></script>
@@ -73,18 +73,36 @@
 	      name:"no-name"
 	    },
         schema: {
+          name: { type: 'Text', validators: ['required']},
+          email: { type: 'Text', validators: ['required', 'email'], help: 'Must be valid' },
+		  number: { type: 'Number', validators: [/[0-9]+(?:\.[0-9]*)?/] },
+		  checkbox: { type: 'Checkbox' },
+		  select: { type: 'Select', options: ['Opt 1', 'Opt 2'] }
+        }
+      });
+	  
+	  var WeightBootstrapModel = Backbone.Model.extend({
+		defaults: {
+	      name:"no-name"
+	    },
+        schema: {
           name: { type: 'BootstrapText', validators: ['required']},
           email: { type: 'BootstrapText', validators: ['required', 'email'], help: 'Must be valid' },
 		  number: { type: 'BootstrapNumber', validators: [/[0-9]+(?:\.[0-9]*)?/] },
 		  checkbox: { type: 'BootstrapCheckbox' },
-		  radio: { type: 'Radio', options: ['Opt 1', 'Opt 2'] },
-		  select: { type: 'Select', options: ['Opt 1', 'Opt 2'] }
+		  select: { type: 'BootstrapSelect', options: ['Opt 1', 'Opt 2'] }
         }
       });
 	  
 	  var WeightGroupModel = Backbone.Model.extend({
 	    schema: {
-          weight: { type: 'BootstrapRepeater', model: WeightModel, max:3, min:1, help: 'Minimum 1 element' }
+          weight: { type: 'Repeater', model: WeightModel, max:3, min:1, help: 'Minimum 1 element' }
+        }
+      });
+	  
+	  var WeightGroupBootstrapModel = Backbone.Model.extend({
+	    schema: {
+          weight: { type: 'BootstrapRepeater', model: WeightBootstrapModel, max:3, min:1, help: 'Minimum 1 element' }
         }
       });
         
@@ -99,11 +117,13 @@
           suba: { type: 'BootstrapText'},
           subb: { type: 'BootstrapText'}
         }},
-        weightGroup: { type: 'BootstrapRepeater', layout:'vertical', model: WeightGroupModel, max:2, min:2, help: 'Min 2, Max 2 elements' }
+        weightGroup: { type: 'Repeater', layout:'vertical', model: WeightGroupModel, max:2, min:2, help: 'Min 2, Max 2 elements' },
+		weightGroupBootstrap: { type: 'BootstrapRepeater', layout:'vertical', model: WeightGroupBootstrapModel, max:2, min:2, help: 'Min 2, Max 2 elements' }
       };
       
       var model = new Backbone.Model({
-        weightGroup: [{weight:[{name:'name', email:'email'}]}]
+        weightGroup: [{weight:[{name:'name', email:'email'}]}],
+		weightGroupBootstrap: [{weight:[{name:'name', email:'email'}]}]
       });
 
       var form = new BootstrapForm({
@@ -111,7 +131,7 @@
         schema: schema,
         fieldsets: [
           ['email'],
-		  { legend: 'Repeaters', fields: ['repeaterTable','repeaterList','weightList','weightGroup'] }
+		  { legend: 'Repeaters', fields: ['repeaterTable','repeaterList','weightList','weightGroup','weightGroupBootstrap'] }
         ]
       });
       

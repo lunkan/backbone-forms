@@ -1,16 +1,25 @@
 //==================================================================================================
 //BOOTSTRAPREPEATER
 //==================================================================================================
-
+			
 Form.editors.BootstrapRepeater = Form.editors.Repeater.extend(null, {
 
 	template: _.template('\
     <div>\
       <table class="table table-striped table-bordered">\
+    	<colgroup>\
+		  <% _.each(headers, function(header, index) { %>\
+    	  <col class="col-<%= index %>">\
+    	  <% }); %>\
+    	  <col class="col-<%= headers.length %>">\
+    	</colgroup>\
 		<thead class="">\
     	  <tr>\
-    	  <% _.each(headers, function(value) { %>\
-		    <th><%= value %></th>\
+    	  <% _.each(headers, function(header) { %>\
+		    <th>\
+				<%= header.title %><br>\
+				<small class="text-muted"><%= header.help %></small>\
+			</th>\
 		  <% }); %>\
     		<th></th>\
           </tr>\
@@ -29,7 +38,7 @@ Form.editors.BootstrapRepeater = Form.editors.Repeater.extend(null, {
     verticalTemplate: _.template('\
     <div>\
       <table class="table table-bordered">\
-		<tfoot class="your foot">\
+		<tfoot>\
 		  <tr>\
             <th colspan="2"><button class="btn btn-primary pull-right" data-target="<%= repeaterId %>" type="button" data-action="add"><%= addLabel %></button>\
     		</th>\
